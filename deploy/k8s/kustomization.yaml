@@ -1,0 +1,25 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: llmgate
+resources:
+  - 00-namespace.yaml
+  - 10-redis.yaml
+  - 20-ollama.yaml
+  - 30-mock-upstream.yaml
+  - 40-gateway.yaml
+  - 50-prometheus.yaml
+  - 60-grafana.yaml
+  - 70-dashboard.yaml
+# Config files live once in files/ and are shared with docker-compose.
+configMapGenerator:
+  - name: prometheus-config
+    files:
+      - prometheus.yml=files/prometheus.yml
+      - alerts.yml=files/alerts.yml
+  - name: grafana-provisioning
+    files:
+      - datasource.yml=files/grafana-datasource.yml
+      - dashboards.yml=files/grafana-dashboards.yml
+  - name: grafana-dashboards
+    files:
+      - llm-gateway.json=files/llm-gateway-dashboard.json

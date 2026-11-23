@@ -1,0 +1,27 @@
+server {
+    listen 80;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Same-origin proxy to the gateway's stats endpoint: no CORS, and the
+    # browser never needs (or sees) any credential.
+    location /api/ {
+        proxy_pass ${GATEWAY_UPSTREAM};
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_read_timeout 10s;
+    }
+
+    # The React dashboard lives under /dashboard/.
+    location = /dashboard {
+        return 301 /dashboard/;
+    }
+    location /dashboard/ {
+        try_files $uri /dashboard/index.html;
+    }
+
+    # Everything else is the static guide page at "/" (index.html + its images).
+    location / {
+        try_files $uri $uri/ =404;
+    }
+}

@@ -1,0 +1,6 @@
+.git
+.env
+deploy/k8s/secret.local.yaml
+dashboard/node_modules
+dashboard/dist
+*.md

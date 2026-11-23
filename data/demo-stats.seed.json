@@ -1,0 +1,93 @@
+{
+  "description": "Demo traffic used by the dashboard when the gateway is unreachable (or with ?demo=1). Synthetic numbers, NOT measurements.",
+  "start": {
+    "total_requests": 1280,
+    "cache_hits": 310,
+    "rate_limited": 42,
+    "prompt_tokens": 61000,
+    "completion_tokens": 214000,
+    "avg_latency_ms": 38.2
+  },
+  "tick": {
+    "requests_per_second": [
+      1,
+      7
+    ],
+    "prompt_tokens_per_request": [
+      18,
+      60
+    ],
+    "completion_tokens_per_request": [
+      40,
+      96
+    ],
+    "latency_ms": [
+      18,
+      60
+    ],
+    "cache_hit_rate": 0.28,
+    "rate_limited_rate": 0.03
+  },
+  "throughput_seed": [
+    141,
+    144,
+    180,
+    162,
+    195,
+    195,
+    186,
+    214,
+    194,
+    216,
+    198,
+    197,
+    209,
+    224,
+    181,
+    178,
+    188,
+    193,
+    163,
+    143,
+    160,
+    102,
+    132,
+    94,
+    79,
+    71,
+    75,
+    97,
+    64,
+    84,
+    89,
+    80,
+    95,
+    78,
+    87,
+    104,
+    139,
+    138,
+    144,
+    169,
+    173,
+    176,
+    210,
+    214,
+    197,
+    219,
+    220,
+    238,
+    230,
+    206,
+    236,
+    186,
+    194,
+    201,
+    161,
+    167,
+    133,
+    153,
+    146,
+    125
+  ]
+}

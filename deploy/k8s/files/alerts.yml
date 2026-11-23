@@ -1,0 +1,89 @@
+# Prometheus alert rules. Shared by docker-compose and Kubernetes.
+#
+# These evaluate inside Prometheus and show up at http://localhost:9090/alerts
+# (Inactive -> Pending -> Firing). There is deliberately NO Alertmanager here,
+# so nothing is emailed or paged; to get notifications, add Alertmanager and a
+# `alerting:` block to prometheus.yml.
+#
+# Thresholds are tuned for a laptop running a small CPU model. Adjust them.
+groups:
+  - name: llmgate
+    rules:
+      - alert: GatewayDown
+        expr: up{job="llm-gateway"} == 0
+        for: 1m
+        labels: { severity: critical }
+        annotations:
+          summary: "Prometheus cannot scrape the gateway"
+          description: "No metrics from the gateway for 1 minute. It is down, restarting, or unreachable."
+
+      - alert: HighUpstreamErrorRate
+        expr: |
+          sum(rate(llm_requests_total{status=~"5.."}[5m]))
+            / clamp_min(sum(rate(llm_requests_total[5m])), 1e-9) > 0.05
+        for: 5m
+        labels: { severity: critical }
+        annotations:
+          summary: "More than 5% of chat requests end in a 5xx"
+          description: "Check the circuit state panel and the upstream (Ollama / mock) logs."
+
+      - alert: HighP99Latency
+        expr: |
+          histogram_quantile(0.99,
+            sum by (le) (rate(llm_latency_seconds_bucket{cache="miss"}[5m]))) > 30
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "p99 model latency above 30 s"
+          description: "Cache hits are excluded. A CPU model under load, or an oversized prompt, is the usual cause."
+
+      - alert: CircuitBreakerOpen
+        expr: llm_circuit_state == 1
+        for: 1m
+        labels: { severity: critical }
+        annotations:
+          summary: "Circuit open for route {{ $labels.route }}"
+          description: "Requests to this route are being refused or sent to the fallback until it recovers."
+
+      - alert: FallbackActive
+        expr: sum by (from, to) (increase(llm_fallbacks_total[5m])) > 0
+        for: 2m
+        labels: { severity: warning }
+        annotations:
+          summary: "Traffic is falling back from {{ $labels.from }} to {{ $labels.to }}"
+          description: "The primary route is failing, so answers are coming from the fallback model."
+
+      - alert: RetriesElevated
+        expr: |
+          sum(rate(llm_retries_total[5m]))
+            / clamp_min(sum(rate(llm_upstream_attempts_total[5m])), 1e-9) > 0.2
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "More than 20% of upstream attempts are retries"
+          description: "The upstream is flaky: it is recovering, but only after a second try."
+
+      - alert: HighRateLimitRejections
+        expr: |
+          sum(rate(llm_rate_limited_total[5m]))
+            / clamp_min(sum(rate(gateway_http_requests_total{path="/v1/chat/completions"}[5m])), 1e-9) > 0.2
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "More than 20% of chat requests are rate limited"
+          description: "Either a client is misbehaving or RATE_CAPACITY / RATE_REFILL_PER_SEC is too low."
+
+      - alert: TokenBudgetRejections
+        expr: increase(llm_budget_rejected_total[15m]) > 0
+        labels: { severity: info }
+        annotations:
+          summary: "An API key hit its token budget"
+          description: "Requests were rejected with insufficient_quota in the last 15 minutes."
+
+      - alert: RedisBackendErrors
+        expr: increase(llm_rate_limiter_errors_total[5m]) + increase(llm_budget_errors_total[5m]) > 0
+        for: 2m
+        labels: { severity: warning }
+        annotations:
+          summary: "Gateway cannot reach Redis"
+          description: "With RATE_FAIL_OPEN=true the gateway keeps serving, but limits and budgets are not enforced."

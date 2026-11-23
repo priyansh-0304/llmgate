@@ -1,0 +1,56 @@
+{
+  "as_of": "2026-10-31",
+  "currency": "USD",
+  "disclaimer": "Reference list prices per 1M tokens, copied on the as_of date from the third-party pages in each source_url (one source per vendor, not cross-checked against the vendors' own pricing pages). Real bills differ: prompt caching, batch discounts, long-context tiers (e.g. Haiku 5.5 above 100K prompt tokens) and later price changes are not modelled. Verify before quoting any number.",
+  "default_reference": "anthropic-claude-haiku-5.5",
+  "references": [
+    {
+      "id": "anthropic-claude-haiku-5.5",
+      "provider": "Anthropic",
+      "model": "Claude Haiku 5.5",
+      "input_per_mtok_usd": 0.1,
+      "output_per_mtok_usd": 0.5,
+      "source_url": "https://tech-insider.org/claude-opus-vs-sonnet-vs-haiku-5-5-2026/"
+    },
+    {
+      "id": "anthropic-claude-sonnet-5.5",
+      "provider": "Anthropic",
+      "model": "Claude Sonnet 5.5",
+      "input_per_mtok_usd": 2.0,
+      "output_per_mtok_usd": 10.0,
+      "source_url": "https://tech-insider.org/claude-opus-vs-sonnet-vs-haiku-5-5-2026/"
+    },
+    {
+      "id": "anthropic-claude-opus-5.5",
+      "provider": "Anthropic",
+      "model": "Claude Opus 5.5",
+      "input_per_mtok_usd": 4.0,
+      "output_per_mtok_usd": 20.0,
+      "source_url": "https://tech-insider.org/claude-opus-vs-sonnet-vs-haiku-5-5-2026/"
+    },
+    {
+      "id": "openai-gpt-6-luna",
+      "provider": "OpenAI",
+      "model": "gpt-6-luna",
+      "input_per_mtok_usd": 0.1,
+      "output_per_mtok_usd": 0.5,
+      "source_url": "https://morphllm.com/openai-api-pricing"
+    },
+    {
+      "id": "openai-gpt-6.1-sol",
+      "provider": "OpenAI",
+      "model": "gpt-6.1-sol",
+      "input_per_mtok_usd": 2.0,
+      "output_per_mtok_usd": 10.0,
+      "source_url": "https://morphllm.com/openai-api-pricing"
+    },
+    {
+      "id": "openai-gpt-6-astra",
+      "provider": "OpenAI",
+      "model": "gpt-6-astra",
+      "input_per_mtok_usd": 10.0,
+      "output_per_mtok_usd": 50.0,
+      "source_url": "https://morphllm.com/openai-api-pricing"
+    }
+  ]
+}

@@ -1,0 +1,75 @@
+# Local CPU inference. Ollama embeds llama.cpp and serves quantized GGUF models
+# with an OpenAI-compatible API (/v1/chat/completions).
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ollama-models
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ollama
+  labels: { app: ollama }
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate # the PVC can only be mounted by one pod at a time
+  selector:
+    matchLabels: { app: ollama }
+  template:
+    metadata:
+      labels: { app: ollama }
+    spec:
+      containers:
+        - name: ollama
+          image: ollama/ollama:latest
+          env:
+            - { name: OLLAMA_NUM_PARALLEL, value: "1" } # keep CPU/RAM use laptop-friendly
+            - { name: OLLAMA_MAX_LOADED_MODELS, value: "1" }
+            - { name: OLLAMA_KEEP_ALIVE, value: "30m" }
+          ports:
+            - containerPort: 11434
+          volumeMounts:
+            - { name: models, mountPath: /root/.ollama }
+          readinessProbe:
+            httpGet: { path: /, port: 11434 }
+            periodSeconds: 5
+          resources:
+            requests: { cpu: 500m, memory: 1Gi }
+            limits: { memory: 3Gi }
+      volumes:
+        - name: models
+          persistentVolumeClaim: { claimName: ollama-models }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ollama
+spec:
+  selector: { app: ollama }
+  ports:
+    - port: 11434
+      targetPort: 11434
+---
+# One-off job that downloads the model into the volume. ~400 MB for the default.
+# Swap the name for e.g. llama3.2:1b (and set OLLAMA_MODEL in the gateway ConfigMap to match).
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ollama-pull-model
+spec:
+  backoffLimit: 10
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: pull
+          image: ollama/ollama:latest
+          env:
+            - { name: OLLAMA_HOST, value: "http://ollama:11434" }
+          command: ["sh", "-c", "until ollama list >/dev/null 2>&1; do sleep 2; done; ollama pull qwen2.5:0.5b"]

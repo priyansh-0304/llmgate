@@ -1,0 +1,27 @@
+flowchart TD
+  C(["<b>Client</b><br/>POST /v1/chat/completions"]):::edge --> MW["<b>Recover + Instrument</b> wrap everything<br/>catch crashes · start timer · count in-flight"]
+  MW --> AUTH{"Valid API key?"}
+  AUTH -- no --> E401[/"401 Unauthorized"/]:::err
+  AUTH -- yes --> RL{"Token left in the bucket?<br/>(Lua script in Redis)"}
+  RL -- "bucket empty" --> E429[/"429 Too Many Requests<br/>+ Retry-After"/]:::err
+  RL -- "Redis down, fail-open off" --> E503[/"503 limiter unavailable"/]:::err
+  RL -- "yes<br/>(or Redis down, fail-open on)" --> PARSE["Read body (max 1 MiB) · parse JSON<br/>pick route · rewrite model alias"]
+  PARSE -- "bad JSON / too big" --> E400[/"400 / 413"/]:::err
+  PARSE --> CACHEABLE{"Not streaming AND<br/>temperature = 0?"}
+  CACHEABLE -- yes --> LOOKUP{"Cache lookup<br/>key = SHA-256 of route + body"}
+  LOOKUP -- HIT --> HIT["Return saved answer<br/>X-Cache: HIT"]:::good
+  CACHEABLE -- "no (BYPASS)" --> FWD
+  LOOKUP -- MISS --> FWD["Forward to Ollama or mock<br/>client key is never forwarded"]
+  FWD -- "unreachable / timeout" --> E502[/"502 Bad Gateway"/]:::err
+  FWD -- "streaming (SSE)" --> STREAM["Relay chunk by chunk, flush each one<br/>read token usage from the last chunk"]
+  FWD -- "normal JSON" --> BUF["Pass reply + status code through<br/>if 200 and cacheable: save in cache (TTL)"]
+  HIT --> REC
+  STREAM --> REC
+  BUF --> REC
+  E502 --> REC
+  REC["<b>Record</b><br/>tokens (upstream usage, else chars / 4) · latency<br/>request count · estimated cost per commercial model<br/>in-memory stats for the dashboard"]:::rec --> OUT(["<b>Response to client</b><br/>every response, errors too,<br/>is also counted in gateway_http_requests_total"]):::edge
+
+  classDef err fill:#3b1d1d,stroke:#f87171,color:#fecaca
+  classDef good fill:#12332a,stroke:#34d399,color:#a7f3d0
+  classDef rec fill:#2b2a1a,stroke:#fbbf24,color:#fef3c7
+  classDef edge fill:#1e293b,stroke:#94a3b8,color:#e2e8f0

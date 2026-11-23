@@ -1,0 +1,83 @@
+# Non-secret settings. Edit, then: kubectl -n llmgate rollout restart deploy/gateway
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gateway-config
+data:
+  LISTEN_ADDR: ":8080"
+  REDIS_ADDR: "redis:6379"
+  DEFAULT_ROUTE: "ollama" # or "mock"
+  OLLAMA_URL: "http://ollama:11434"
+  OLLAMA_MODEL: "qwen2.5:0.5b"
+  MOCK_URL: "http://mock-upstream:9000"
+  RATE_CAPACITY: "20" # burst size per client
+  RATE_REFILL_PER_SEC: "10" # sustained requests/second per client
+  RATE_FAIL_OPEN: "true"
+  CACHE_TTL: "10m"
+  UPSTREAM_TIMEOUT: "120s" # CPU inference is slow; first token can take a while
+  FALLBACK_ROUTE: "" # "mock" or "ollama": route to use when the chosen one fails
+  MAX_RETRIES: "1" # extra attempts per route on 5xx / connection errors
+  RETRY_BACKOFF: "100ms"
+  BREAKER_FAILURES: "5" # consecutive failures that open a route's circuit (0 = off)
+  BREAKER_COOLDOWN: "30s"
+  TOKEN_BUDGET: "0" # tokens per API key per window (0 = off)
+  TOKEN_BUDGET_WINDOW: "24h"
+  DEMO_ENDPOINT: "true" # dashboard "Send test request" button; local demos only, remove for anything shared
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway
+  labels: { app: gateway }
+spec:
+  # One replica on purpose: /api/stats lives in process memory, so with several
+  # replicas the dashboard would show whichever one answered. Prometheus
+  # aggregates across replicas correctly; rate limiting and cache already do.
+  replicas: 1
+  selector:
+    matchLabels: { app: gateway }
+  template:
+    metadata:
+      labels: { app: gateway }
+    spec:
+      containers:
+        - name: gateway
+          image: llmgate/gateway:dev
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef: { name: gateway-config }
+          env:
+            - name: GATEWAY_API_KEY
+              valueFrom:
+                secretKeyRef: { name: llmgate-secrets, key: GATEWAY_API_KEY }
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: llmgate-secrets, key: REDIS_PASSWORD }
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet: { path: /healthz, port: 8080 }
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /healthz, port: 8080 }
+            periodSeconds: 10
+          securityContext:
+            runAsNonRoot: true
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ["ALL"] }
+          resources:
+            requests: { cpu: 100m, memory: 64Mi }
+            limits: { memory: 256Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway
+spec:
+  type: NodePort
+  selector: { app: gateway }
+  ports:
+    - port: 8080
+      targetPort: 8080
+      nodePort: 30080

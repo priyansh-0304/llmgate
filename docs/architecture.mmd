@@ -1,0 +1,42 @@
+flowchart TB
+  APP["Your app / curl / k6"]:::ext
+  BR["Browser"]:::ext
+
+  subgraph K["kind cluster (Kubernetes inside Docker)"]
+    DB["<b>Dashboard</b><br/>nginx + React"]
+    GR["<b>Grafana</b><br/>charts"]
+    PR["<b>Prometheus</b><br/>stores metrics"]
+    GW["<b>Gateway</b> (Go)<br/>auth · rate limit · cache · routing<br/>token + cost accounting<br/>/metrics · /api/stats"]
+    R[("<b>Redis</b><br/>rate-limit buckets<br/>cached answers")]
+    OL["<b>Ollama</b><br/>quantized model on CPU"]
+    MK["<b>Mock upstream</b><br/>fake OpenAI server"]
+    PV[("Volume<br/>model files")]
+    CFG["<b>Config</b><br/>Secret: API key, passwords<br/>ConfigMap: limits, URLs, model<br/>pricing.json: reference prices"]
+  end
+
+  APP == "chat requests :8080" ==> GW
+  APP -. "k6 baseline :9000" .-> MK
+  BR -- ":3000" --> DB
+  BR -- ":3001" --> GR
+  DB -- "/api/stats<br/>(nginx proxy, no key in browser)" --> GW
+  GR -- "PromQL queries" --> PR
+  PR -- "scrapes /metrics every 5 s" --> GW
+  GW <--> R
+  GW -- "route: ollama" --> OL
+  GW -- "route: mock" --> MK
+  OL --- PV
+  GW -. "reads" .-> CFG
+  R -. "password" .-> CFG
+  GR -. "password" .-> CFG
+
+  classDef ext fill:#0f172a,stroke:#94a3b8,color:#e2e8f0,stroke-dasharray:4 3
+  classDef core fill:#12332a,stroke:#34d399,color:#d1fae5
+  classDef store fill:#1e293b,stroke:#60a5fa,color:#dbeafe
+  classDef model fill:#2a2438,stroke:#a78bfa,color:#ede9fe
+  classDef obs fill:#2b2a1a,stroke:#fbbf24,color:#fef3c7
+  classDef cfg fill:#1e293b,stroke:#64748b,color:#cbd5e1
+  class GW core
+  class R,PV store
+  class OL,MK model
+  class PR,GR,DB obs
+  class CFG cfg

@@ -1,0 +1,15 @@
+# Shared by docker-compose and Kubernetes: in both, the gateway is reachable
+# as "gateway:8080" (compose service name / k8s Service name).
+global:
+  scrape_interval: 5s
+  evaluation_interval: 15s
+
+# Alert rules (see alerts.yml). Mounted next to this file in both compose and k8s.
+rule_files:
+  - /etc/prometheus/alerts.yml
+
+scrape_configs:
+  - job_name: llm-gateway
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["gateway:8080"]

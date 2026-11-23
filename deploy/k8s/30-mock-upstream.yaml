@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mock-upstream
+  labels: { app: mock-upstream }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: mock-upstream }
+  template:
+    metadata:
+      labels: { app: mock-upstream }
+    spec:
+      containers:
+        - name: mock-upstream
+          image: llmgate/mock-upstream:dev
+          imagePullPolicy: IfNotPresent # image is loaded with `kind load docker-image`
+          env:
+            - { name: MOCK_LATENCY, value: "20ms" }
+            - { name: MOCK_JITTER, value: "10ms" }
+            - { name: MOCK_COMPLETION_TOKENS, value: "64" }
+            - { name: MOCK_ERROR_RATE, value: "0" }
+          ports:
+            - containerPort: 9000
+          readinessProbe:
+            httpGet: { path: /healthz, port: 9000 }
+          securityContext:
+            runAsNonRoot: true
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ["ALL"] }
+          resources:
+            requests: { cpu: 100m, memory: 32Mi }
+            limits: { memory: 128Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mock-upstream
+spec:
+  type: NodePort # exposed on host :9000 so k6 can hit it directly
+  selector: { app: mock-upstream }
+  ports:
+    - port: 9000
+      targetPort: 9000
+      nodePort: 30900

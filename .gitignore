@@ -1,0 +1,13 @@
+# secrets: never commit
+.env
+deploy/k8s/secret.local.yaml
+
+# build output
+/bin/
+dashboard/node_modules/
+dashboard/dist/
+
+# editor / OS
+.DS_Store
+.idea/
+.vscode/
