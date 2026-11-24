@@ -302,9 +302,8 @@ footer{border-top:1px solid var(--line);padding:32px 0 56px;color:var(--muted);f
 
     <ol class="steps-run">
       <li><h3>Get the code</h3><p>Clone the repository and open it in a terminal.</p>
-        <div class="codebox"><pre><code>git clone &lt;your-repo-url&gt; llmgate
-cd llmgate</code></pre><button class="copy" type="button" data-copy="git clone <your-repo-url> llmgate&#10;cd llmgate">Copy</button></div></li>
-      <li><h3>Create your secrets</h3><p>Makes random passwords in a git-ignored <code>.env</code> file. Nothing secret is ever stored in the code.</p>
+                <div class="codebox"><pre><code>git clone https://github.com/priyansh-0304/llmgate.git
+cd llmgate</code></pre><button class="copy" type="button" data-copy="git clone https://github.com/priyansh-0304/llmgate.git&#10;cd llmgate">Copy</button></div></li><li><h3>Create your secrets</h3><p>Makes random passwords in a git-ignored <code>.env</code> file. Nothing secret is ever stored in the code.</p>
         <div class="codebox"><pre><code>make env</code></pre><button class="copy" type="button" data-copy="make env">Copy</button></div></li>
       <li><h3>Start everything</h3><p>The first build takes a few minutes.</p>
         <div class="codebox"><pre><code>docker compose up --build</code></pre><button class="copy" type="button" data-copy="docker compose up --build">Copy</button></div></li>
